@@ -8,9 +8,10 @@ const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __f
 
 // ==========================================
 // SUPABASE CONSTANT CONFIGURATION
+// (Ganti string di bawah dengan URL & API Key asli dari Dashboard Supabase Anda)
 // ==========================================
-const SUPABASE_URL = "https://ztgmlujvdatlrhzdnbgw.supabase.co"; // Ganti dengan URL Supabase Anda
-const SUPABASE_SERVICE_KEY = "sb_publishable_TII8ieMGUIPqQLgcmQzzxg_-pSi8uOW";          // Ganti dengan Service/Custom Key Anda
+const SUPABASE_URL = "https://xxxxxx.supabase.co"; 
+const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; 
 
 let app, db, auth, userId = null;
 let historyLogs = [];
@@ -18,7 +19,7 @@ let totalVisitors = 0;
 let reportsLogs = [];
 let realTimeChart = null;
 
-// Unique Visitor ID per sesi browser
+// Unique Visitor ID per sesi browser untuk mendeteksi pengunjung online secara global
 let visitorSessionId = sessionStorage.getItem('ayaka_visitor_uuid');
 if (!visitorSessionId) {
     visitorSessionId = crypto.randomUUID();
@@ -117,7 +118,7 @@ class SupabaseClient {
     }
 
     isConfigured() {
-        return this.url.includes("supabase.co") && this.key.length > 5 && !this.url.includes("your-supabase-project");
+        return this.url.includes("supabase.co") && this.key.length > 5 && !this.url.includes("xxxxxx");
     }
 
     async headers() {
@@ -132,10 +133,19 @@ class SupabaseClient {
     async addActivation(logData) {
         if (!this.isConfigured()) return;
         try {
+            // Menggunakan key "user" dalam bentuk string untuk menghindari reserved word PostgreSQL
+            const payload = {
+                "user": logData.user,
+                "type": logData.type,
+                "timestamp": logData.timestamp,
+                "dateString": logData.dateString,
+                "sender_id": logData.sender_id
+            };
+
             await fetch(`${this.url}/rest/v1/activations`, {
                 method: 'POST',
                 headers: await this.headers(),
-                body: JSON.stringify(logData)
+                body: JSON.stringify(payload)
             });
         } catch (e) {
             console.error("Supabase addActivation error:", e);
@@ -208,6 +218,7 @@ class SupabaseClient {
     async getActiveVisitors() {
         if (!this.isConfigured()) return null;
         try {
+            // Rentang waktu aktif dalam 45 detik terakhir
             const cutoff = new Date(Date.now() - 45000).toISOString();
             const res = await fetch(`${this.url}/rest/v1/visitors?select=visitor_id&last_seen=gt.${cutoff}`, {
                 headers: await this.headers()
@@ -235,7 +246,7 @@ function checkSupabaseStatus() {
 
     if (!badge) return;
     if (supabase.isConfigured()) {
-        badge.textContent = "TERHUBUNG (CONST)";
+        badge.textContent = "TERHUBUNG (GLOBAL)";
         badge.className = "text-[10px] font-black px-2 py-0.5 rounded bg-emerald-300 text-emerald-900 border border-black";
     } else {
         badge.textContent = "STANDBY (BELUM DISET)";
@@ -438,6 +449,7 @@ window.handleVerifyAndApply = async function() {
             sender_id: userId
         };
 
+        // Kirim data aktivasi secara global ke Supabase
         await supabase.addActivation(logData);
 
         if (db && userId) {
@@ -472,8 +484,8 @@ function renderHistory() {
     container.innerHTML = historyLogs.map(item => `
         <div class="neo-card p-3.5 flex items-center justify-between bg-white">
             <div>
-                <p class="text-xs font-black">${item.user}</p>
-                <p class="text-[10px] font-bold text-gray-500">${item.type}</p>
+                <p class="text-xs font-black">${item.user || item.email || 'User'}</p>
+                <p class="text-[10px] font-bold text-gray-500">${item.type || '1 Tahun Premium'}</p>
             </div>
             <span class="px-2.5 py-1 bg-emerald-400 border-2 border-black rounded-lg text-[10px] font-black">
                 AKTIF
@@ -586,7 +598,12 @@ function updateCounts() {
     if (actTotalEl) actTotalEl.textContent = countActivations;
 
     const todayStr = new Date().toDateString();
-    const todayCount = historyLogs.filter(h => h.dateString === todayStr || h.date_string?.includes(todayStr)).length;
+    const todayCount = historyLogs.filter(h => {
+        if (!h.timestamp) return false;
+        const itemDate = new Date(h.timestamp).toDateString();
+        return itemDate === todayStr || h.dateString === todayStr || h.date_string?.includes(new Date().toLocaleDateString('id-ID'));
+    }).length;
+
     if (actTodayEl) actTodayEl.textContent = todayCount;
 
     const visitorsEl = document.getElementById('visitors-count');
@@ -624,12 +641,6 @@ async function initFirebase() {
             }
             userId = auth.currentUser?.uid || crypto.randomUUID();
 
-            const visitorRef = doc(db, 'artifacts', appId, 'public', 'data', 'visitors', userId);
-            await setDoc(visitorRef, {
-                lastSeen: Date.now(),
-                userAgent: navigator.userAgent
-            }, { merge: true });
-
             const visitorsCol = collection(db, 'artifacts', appId, 'public', 'data', 'visitors');
             onSnapshot(visitorsCol, (snapshot) => {
                 if (!supabase.isConfigured()) {
@@ -638,38 +649,6 @@ async function initFirebase() {
                 }
             }, (error) => {
                 console.error("Visitors snapshot error:", error);
-            });
-
-            const activationsCol = collection(db, 'artifacts', appId, 'public', 'data', 'activations');
-            onSnapshot(activationsCol, (snapshot) => {
-                let firestoreLogs = [];
-                snapshot.forEach(docSnap => {
-                    firestoreLogs.push(docSnap.data());
-                });
-                
-                if (!supabase.isConfigured() || firestoreLogs.length > historyLogs.length) {
-                    historyLogs = firestoreLogs;
-                    historyLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                    updateCounts();
-                    if (activeTabName === 'riwayat') renderHistory();
-                }
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-            });
-
-            const reportsCol = collection(db, 'artifacts', appId, 'public', 'data', 'reports');
-            onSnapshot(reportsCol, (snapshot) => {
-                let firestoreReports = [];
-                snapshot.forEach(docSnap => {
-                    firestoreReports.push(docSnap.data());
-                });
-                if (!supabase.isConfigured() && firestoreReports.length > 0) {
-                    reportsLogs = firestoreReports;
-                    reportsLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                    renderReports();
-                }
-            }, (error) => {
-                console.error("Firestore reports snapshot error:", error);
             });
         }
     } catch (e) {
