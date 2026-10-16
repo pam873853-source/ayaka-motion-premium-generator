@@ -1,6 +1,6 @@
 // config.js - AYAKA MOTION CONFIGURATION & SECURITY
 
-// Fungsi Helper untuk mengambil data dari .env (Vite / Vercel Environment Variables)
+// Helper function untuk mengambil variabel dari .env / Vercel Environment Variables
 const getEnv = (key, fallback = '') => {
     if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
         return import.meta.env[key];
@@ -10,7 +10,9 @@ const getEnv = (key, fallback = '') => {
 
 export const APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'ayaka-motion-premium';
 
-// 1. DAFTAR DOMAIN RESMI YANG DIIZINKAN (Domain Lock)
+// ------------------------------------------------------------------
+// 1. DAFTAR DOMAIN RESMI (DOMAIN LOCK / RESTRICTION)
+// ------------------------------------------------------------------
 export const ALLOWED_DOMAINS = [
     'ayaka-motion-am-premium.vercel.app',
     'ayaka-motion-premium-generator.vercel.app',
@@ -18,10 +20,16 @@ export const ALLOWED_DOMAINS = [
     '127.0.0.1'
 ];
 
-// 2. FUNGSI VALIDASI PENGUNCIAN DOMAIN
+// ------------------------------------------------------------------
+// 2. FUNGSI PENGECEKAN DOMAIN LOKAL & PRODUCTION
+// ------------------------------------------------------------------
 export function validateDomainAccess() {
     const currentHost = window.location.hostname;
-    const isAllowed = ALLOWED_DOMAINS.some(domain => currentHost === domain || currentHost.endsWith('.' + domain));
+    
+    // Pengecekan apakah hostname yang mengakses ada dalam daftar domain resmi
+    const isAllowed = ALLOWED_DOMAINS.some(domain => 
+        currentHost === domain || currentHost.endsWith('.' + domain)
+    );
     
     if (!isAllowed) {
         console.error(`[AYAKA SECURITY] Akses Ditolak! Domain '${currentHost}' tidak diizinkan menggunakan API Key ini.`);
@@ -30,25 +38,34 @@ export function validateDomainAccess() {
     return true;
 }
 
-// 3. KONFIGURASI SUPABASE
-export const SUPABASE_URL = getEnv('VITE_SUPABASE_URL', 'https://mnmzvgqtbgiicousaqjy.supabase.co');
-export const SUPABASE_KEY = getEnv('VITE_SUPABASE_KEY', 'sb_publishable_ELOkua7e7N46_44FoSSRYg_cq6XqtoQ');
+// ------------------------------------------------------------------
+// 3. KONFIGURASI SUPABASE DATABASE
+// ------------------------------------------------------------------
+export const SUPABASE_URL = getEnv('VITE_SUPABASE_URL', 'https://xxxx.supabase.co');
+export const SUPABASE_KEY = getEnv('VITE_SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxx');
 
-// 4. KONFIGURASI FIREBASE
+// ------------------------------------------------------------------
+// 4. KONFIGURASI FIREBASE AUTH & DATABASE
+// ------------------------------------------------------------------
 export const FIREBASE_CONFIG = (() => {
     try {
         const raw = getEnv('VITE_FIREBASE_CONFIG');
         return raw ? JSON.parse(raw) : {
-            apiKey: getEnv('VITE_AM_API_KEY'),
+            apiKey: getEnv('VITE_AM_API_KEY', 'AIzaSyDtG1AU22ErnQD60AzBAcaknySiz9_CEq0'),
             authDomain: "ayaka-motion.firebaseapp.com",
-            projectId: "ayaka-motion"
+            projectId: "ayaka-motion",
+            storageBucket: "ayaka-motion.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef123456"
         };
     } catch (e) {
         return {};
     }
 })();
 
+// ------------------------------------------------------------------
 // 5. KONFIGURASI ALIGHT MOTION API KEY & TOKEN (TERKUNCI)
+// ------------------------------------------------------------------
 export const ALIGHT_MOTION_CONFIG = {
     ORDER_ID: getEnv('VITE_AM_ORDER_ID', 'GPA'),
     API_KEY: getEnv('VITE_AM_API_KEY', 'AIzaSyDtG1AU22ErnQD60AzBAcaknySiz9_CEq0'),
