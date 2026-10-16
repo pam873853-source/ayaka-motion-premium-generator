@@ -31,8 +31,8 @@ export function validateDomainAccess() {
 }
 
 // 3. KONFIGURASI SUPABASE
-export const SUPABASE_URL = getEnv('VITE_SUPABASE_URL', 'https://xxxx.supabase.co');
-export const SUPABASE_KEY = getEnv('VITE_SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxx');
+export const SUPABASE_URL = getEnv('VITE_SUPABASE_URL', 'https://mnmzvgqtbgiicousaqjy.supabase.co');
+export const SUPABASE_KEY = getEnv('VITE_SUPABASE_KEY', 'sb_publishable_ELOkua7e7N46_44FoSSRYg_cq6XqtoQ');
 
 // 4. KONFIGURASI FIREBASE
 export const FIREBASE_CONFIG = (() => {
