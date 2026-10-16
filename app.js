@@ -10,8 +10,8 @@ const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __f
 // SUPABASE CONSTANT CONFIGURATION
 // (Ganti string di bawah dengan URL & API Key asli dari Dashboard Supabase Anda)
 // ==========================================
-const SUPABASE_URL = "https://xxxxxx.supabase.co"; 
-const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; 
+const SUPABASE_URL = "https://ztgmlujvdatlrhzdnbgw.supabase.co"; 
+const SUPABASE_SERVICE_KEY = "sb_publishable_TII8ieMGUIPqQLgcmQzzxg_-pSi8uOW..."; 
 
 let app, db, auth, userId = null;
 let historyLogs = [];
