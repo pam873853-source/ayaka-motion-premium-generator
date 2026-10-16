@@ -7,16 +7,23 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'ayaka-motion-default
 const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
 
 // ==========================================
-// SUPABASE CONSTANT CONFIGURATION (TANPA LOCALSTORAGE)
+// SUPABASE CONSTANT CONFIGURATION
 // ==========================================
-const SUPABASE_URL = "https://ztgmlujvdatlrhzdnbgw.supabase.co"; // Ganti dengan URL Supabase Anda
-const SUPABASE_SERVICE_KEY = "sb_publishable_TII8ieMGUIPqQLgcmQzzxg_-pSi8uOW";          // Ganti dengan Service Key / Custom Key Anda
+const SUPABASE_URL = "https://your-supabase-project.supabase.co"; // Ganti dengan URL Supabase Anda
+const SUPABASE_SERVICE_KEY = "your-service-key-here";          // Ganti dengan Service/Custom Key Anda
 
 let app, db, auth, userId = null;
 let historyLogs = [];
 let totalVisitors = 0;
 let reportsLogs = [];
 let realTimeChart = null;
+
+// Unique Visitor ID per sesi browser
+let visitorSessionId = sessionStorage.getItem('ayaka_visitor_uuid');
+if (!visitorSessionId) {
+    visitorSessionId = crypto.randomUUID();
+    sessionStorage.setItem('ayaka_visitor_uuid', visitorSessionId);
+}
 
 function initActivationChart() {
     const ctx = document.getElementById('activation-chart');
@@ -189,7 +196,8 @@ class SupabaseClient {
                 },
                 body: JSON.stringify({
                     visitor_id: visitorId,
-                    last_seen: new Date().toISOString()
+                    last_seen: new Date().toISOString(),
+                    user_agent: navigator.userAgent
                 })
             });
         } catch (e) {
@@ -200,7 +208,7 @@ class SupabaseClient {
     async getActiveVisitors() {
         if (!this.isConfigured()) return null;
         try {
-            const cutoff = new Date(Date.now() - 30000).toISOString();
+            const cutoff = new Date(Date.now() - 45000).toISOString();
             const res = await fetch(`${this.url}/rest/v1/visitors?select=visitor_id&last_seen=gt.${cutoff}`, {
                 headers: await this.headers()
             });
@@ -671,10 +679,9 @@ async function initFirebase() {
 
 async function pingPresence() {
     if (supabase.isConfigured()) {
-        if (!userId) userId = crypto.randomUUID();
-        await supabase.updatePresence(userId);
+        await supabase.updatePresence(visitorSessionId);
         const sbVisitors = await supabase.getActiveVisitors();
-        if (sbVisitors !== null) {
+        if (sbVisitors !== null && sbVisitors > 0) {
             totalVisitors = sbVisitors;
             updateCounts();
         }
@@ -683,7 +690,7 @@ async function pingPresence() {
 
 initFirebase();
 pingPresence();
-setInterval(pingPresence, 10000);
+setInterval(pingPresence, 8000);
 
 syncSupabaseActivations();
 syncSupabaseReports();
