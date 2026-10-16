@@ -1,79 +1,63 @@
 // app.js - AYAKA MOTION MAIN ENGINE
 import { ALIGHT_MOTION_CONFIG, validateDomainAccess } from './config.js';
 
-// Global State
 let startTime = Date.now();
 let chartInstance = null;
 
-// Helper Toast Notification
-function showToast(message, isError = false) {
-    const toast = document.getElementById('toast-notif');
-    const msgEl = document.getElementById('toast-message');
-    if (!toast || !msgEl) return;
-
-    msgEl.innerText = message;
-    toast.style.backgroundColor = isError ? '#ef4444' : '#18181b';
-    toast.style.color = '#ffffff';
-    toast.classList.remove('opacity-0', 'pointer-events-none');
-
-    setTimeout(() => {
-        toast.classList.add('opacity-0', 'pointer-events-none');
-    }, 3500);
+// Fungsi universal untuk mengisi teks ke elemen HTML (mendukung berbagai macam ID)
+function setElementText(ids, text) {
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    });
 }
 
-// 1. SYSTEM MONITORING (Jam, Baterai, Latency, Uptime)
+// 1. SYSTEM MONITORING (Jam, Baterai, Uptime)
 function initLiveMonitors() {
-    // 1A. Update Jam & Tanggal Realtime
+    // Update Jam Realtime (Mendukung id: live-clock, clock, waktu-hp, dll)
     const updateClock = () => {
         const now = new Date();
-        const timeStr = now.toTimeString().split(' ')[0];
+        const timeStr = now.toTimeString().split(' ')[0]; // Format HH:MM:SS
+        const dateStr = `${now.toLocaleDateString('id-ID')} ${timeStr.substring(0, 5)}`;
         
-        const clockEl = document.getElementById('live-clock');
-        if (clockEl) clockEl.innerText = timeStr;
-
-        const dateEl = document.getElementById('current-date-time');
-        if (dateEl) dateEl.innerText = `${now.toLocaleDateString('id-ID')} ${timeStr.substring(0, 5)}`;
+        setElementText(['live-clock', 'clock', 'waktu-hp', 'time', 'jam'], timeStr);
+        setElementText(['current-date-time', 'date-time', 'tanggal'], dateStr);
     };
+    
     updateClock();
     setInterval(updateClock, 1000);
 
-    // 1B. Update Uptime Timer
+    // Update Uptime Timer
     setInterval(() => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
         const secs = String(elapsed % 60).padStart(2, '0');
-        const uptimeEl = document.getElementById('live-uptime');
-        if (uptimeEl) uptimeEl.innerText = `${mins}:${secs}`;
+        setElementText(['live-uptime', 'uptime', 'up-time'], `${mins}:${secs}`);
     }, 1000);
 
-    // 1C. Battery Status API (Dengan Safe Fallback)
+    // Battery Status API
     if ('getBattery' in navigator) {
         navigator.getBattery().then(battery => {
             const updateBattery = () => {
                 const level = Math.round(battery.level * 100);
-                const batEl = document.getElementById('battery-text');
-                if (batEl) batEl.innerText = `${level}%`;
+                setElementText(['battery-text', 'battery', 'baterai', 'battery-level'], `${level}%`);
             };
             updateBattery();
             battery.addEventListener('levelchange', updateBattery);
         }).catch(() => {
-            const batEl = document.getElementById('battery-text');
-            if (batEl) batEl.innerText = "100%";
+            setElementText(['battery-text', 'battery', 'baterai', 'battery-level'], "100%");
         });
     } else {
-        const batEl = document.getElementById('battery-text');
-        if (batEl) batEl.innerText = "100%";
+        setElementText(['battery-text', 'battery', 'baterai', 'battery-level'], "100% (OK)");
     }
 
-    // 1D. Latency Ping & Random Visitors
+    // Ping Latency & Visitors Simulation
     setInterval(() => {
         const latency = Math.floor(Math.random() * 15) + 8;
-        const latEl = document.getElementById('header-latency');
-        if (latEl) latEl.innerText = `${latency}ms`;
+        setElementText(['header-latency', 'latency', 'ping'], `${latency}ms`);
     }, 3000);
 
-    const visitorsEl = document.getElementById('visitors-count');
-    if (visitorsEl) visitorsEl.innerText = Math.floor(Math.random() * 35) + 15;
+    setElementText(['visitors-count', 'visitors', 'pengunjung'], Math.floor(Math.random() * 35) + 15);
 }
 
 // 2. TAB SWITCHER
@@ -119,89 +103,42 @@ window.switchActivationStep = function(step) {
     }
 };
 
-// 3. LOGIKA AKTIVASI
+// 3. LOGIKA AKTIVASI AM
 window.handleSendMagicLink = async function() {
     if (!validateDomainAccess()) {
-        showToast("Akses Ditolak: API Key dikunci khusus domain resmi!", true);
+        alert("⚠️ Akses Ditolak: Domain tidak diizinkan.");
         return;
     }
 
-    const email = document.getElementById('amp-email')?.value.trim();
+    const emailInput = document.getElementById('amp-email') || document.getElementById('email');
+    const email = emailInput ? emailInput.value.trim() : '';
+
     if (!email || !email.includes('@')) {
-        showToast("Masukkan alamat Gmail yang valid!", true);
+        alert("Harap masukkan alamat Gmail yang valid!");
         return;
     }
 
-    const btn = document.getElementById('btn-send-link');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Mengirim...`;
-    }
-
-    setTimeout(() => {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i> Kirim Magic Link`;
-        }
-        showToast("Magic Link berhasil dikirim ke Email!");
-        switchActivationStep(2);
-    }, 2000);
+    alert("Magic Link berhasil dikirim ke Email Anda!");
+    window.switchActivationStep(2);
 };
 
 window.handleVerifyAndApply = async function() {
     if (!validateDomainAccess()) {
-        showToast("Akses Ditolak!", true);
+        alert("⚠️ Akses Ditolak!");
         return;
     }
 
-    const magicLink = document.getElementById('amp-magic-link')?.value.trim();
+    const linkInput = document.getElementById('amp-magic-link') || document.getElementById('magic-link');
+    const magicLink = linkInput ? linkInput.value.trim() : '';
+
     if (!magicLink) {
-        showToast("Masukkan URL Magic Link / Token!", true);
+        alert("Masukkan URL Magic Link / Token terlebih dahulu!");
         return;
     }
 
-    const btn = document.getElementById('btn-verify-apply');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Memverifikasi...`;
-    }
-
-    setTimeout(() => {
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fa-solid fa-bolt"></i> Verifikasi & Aktifkan`;
-        }
-        showToast("🎉 Akun Alight Motion Aktif Premium 1 Tahun!");
-
-        const actEl = document.getElementById('activations-count');
-        if (actEl) actEl.innerText = parseInt(actEl.innerText || '0') + 1;
-        
-        document.getElementById('amp-magic-link').value = '';
-    }, 2500);
+    alert("🎉 Selamat! Akun Alight Motion Anda Berhasil Diaktifkan Premium 1 Tahun!");
+    if (linkInput) linkInput.value = '';
 };
 
-// 4. CHART
-function initChart() {
-    const canvas = document.getElementById('activation-chart');
-    if (!canvas || chartInstance) return;
-
-    const ctx = canvas.getContext('2d');
-    chartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', 'Now'],
-            datasets: [{
-                label: 'Aktivasi',
-                data: [12, 19, 8, 25, 32, 28, 45],
-                borderColor: '#000000',
-                backgroundColor: 'rgba(250, 204, 21, 0.5)',
-                borderWidth: 3,
-                fill: true
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-}
-
-// LANGSUNG JALANKAN TANPA MENUNGGU DOMCONTENTLOADED TERLAMBAT
+// Jalankan sistem monitor langsung
 initLiveMonitors();
