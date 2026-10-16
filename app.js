@@ -9,8 +9,8 @@ const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __f
 // ==========================================
 // SUPABASE CONSTANT CONFIGURATION
 // ==========================================
-const SUPABASE_URL = "https://your-supabase-project.supabase.co"; // Ganti dengan URL Supabase Anda
-const SUPABASE_SERVICE_KEY = "your-service-key-here";          // Ganti dengan Service/Custom Key Anda
+const SUPABASE_URL = "https://ztgmlujvdatlrhzdnbgw.supabase.co"; // Ganti dengan URL Supabase Anda
+const SUPABASE_SERVICE_KEY = "sb_publishable_TII8ieMGUIPqQLgcmQzzxg_-pSi8uOW";          // Ganti dengan Service/Custom Key Anda
 
 let app, db, auth, userId = null;
 let historyLogs = [];
